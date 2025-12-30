@@ -1,0 +1,42 @@
+{
+  "name": "slack-zoom-bot",
+  "version": "1.0.0",
+  "description": "Slack Bot for Zoom meeting management",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "serverless offline",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "deploy": "serverless deploy",
+    "deploy:prod": "serverless deploy --stage prod",
+    "logs": "serverless logs -f slack -t"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.18.0",
+    "axios": "^1.6.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.159",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "@vitest/coverage-v8": "^1.2.2",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "msw": "^2.1.5",
+    "prettier": "^3.2.4",
+    "serverless": "^3.38.0",
+    "serverless-esbuild": "^1.52.0",
+    "serverless-offline": "^13.3.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
