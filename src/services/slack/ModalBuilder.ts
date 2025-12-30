@@ -2,6 +2,34 @@ import { View } from '@slack/bolt';
 import { CALLBACK_IDS } from '../../handlers/modals/callbacks';
 
 /**
+ * 今日の日付をYYYY-MM-DD形式で取得
+ */
+function getTodayDate(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 現在時刻から30分後の時刻をHH:MM形式で取得（30分単位に丸める）
+ */
+function getDefaultTime(): string {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 30);
+  // 30分単位に丸める
+  const minutes = Math.ceil(now.getMinutes() / 30) * 30;
+  now.setMinutes(minutes % 60);
+  if (minutes >= 60) {
+    now.setHours(now.getHours() + 1);
+  }
+  const hours = String(now.getHours()).padStart(2, '0');
+  const mins = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${mins}`;
+}
+
+/**
  * Slack Modal UI ビルダー
  */
 export class ModalBuilder {
@@ -53,42 +81,62 @@ export class ModalBuilder {
             text: '操作',
           },
         },
-        // アカウント選択
+        // 日付選択（共通）
         {
           type: 'input',
-          block_id: 'account_block',
+          block_id: 'date_block',
           element: {
-            type: 'static_select',
-            action_id: 'account_select',
+            type: 'datepicker',
+            action_id: 'date_select',
+            initial_date: getTodayDate(),
             placeholder: {
               type: 'plain_text',
-              text: 'アカウントを選択',
+              text: '日付を選択',
             },
-            options: [
-              {
-                text: { type: 'plain_text', text: 'Account A' },
-                value: 'a',
-              },
-              {
-                text: { type: 'plain_text', text: 'Account B' },
-                value: 'b',
-              },
-              {
-                text: { type: 'plain_text', text: 'Account C' },
-                value: 'c',
-              },
-              {
-                text: { type: 'plain_text', text: '全てのアカウント' },
-                value: 'all',
-              },
-            ],
           },
           label: {
             type: 'plain_text',
-            text: 'Zoomアカウント',
+            text: '日付',
           },
         },
-        // 所要時間選択
+        // 会議名入力（会議作成時）
+        {
+          type: 'input',
+          block_id: 'topic_block',
+          optional: true,
+          element: {
+            type: 'plain_text_input',
+            action_id: 'topic_input',
+            placeholder: {
+              type: 'plain_text',
+              text: '会議名を入力（省略可）',
+            },
+          },
+          label: {
+            type: 'plain_text',
+            text: '会議名（会議作成時）',
+          },
+        },
+        // 時間選択（会議作成時）
+        {
+          type: 'input',
+          block_id: 'time_block',
+          optional: true,
+          element: {
+            type: 'timepicker',
+            action_id: 'time_select',
+            initial_time: getDefaultTime(),
+            placeholder: {
+              type: 'plain_text',
+              text: '時間を選択',
+            },
+          },
+          label: {
+            type: 'plain_text',
+            text: '開始時間（会議作成時）',
+          },
+        },
+        // 所要時間選択（会議作成時）
         {
           type: 'input',
           block_id: 'duration_block',
@@ -122,24 +170,6 @@ export class ModalBuilder {
           label: {
             type: 'plain_text',
             text: '所要時間（会議作成時）',
-          },
-        },
-        // 会議名入力
-        {
-          type: 'input',
-          block_id: 'topic_block',
-          optional: true,
-          element: {
-            type: 'plain_text_input',
-            action_id: 'topic_input',
-            placeholder: {
-              type: 'plain_text',
-              text: '会議名を入力（省略可）',
-            },
-          },
-          label: {
-            type: 'plain_text',
-            text: '会議名',
           },
         },
       ],

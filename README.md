@@ -12,8 +12,8 @@ SlackのSlash Command (`/zoom`) から、Zoom会議を作成・予定確認で�
 
 ## 主な機能
 
-- **会議作成**: 3つのZoomアカウント（A/B/C）から選択して即時会議を作成
-- **予定確認**: 当日の会議予定を一覧表示（個別/全アカウント）
+- **会議作成**: Zoomの即時会議を作成
+- **予定確認**: 当日の会議予定を一覧表示
 - **モーダルUI**: Slack Block Kitによる直感的な操作
 
 ## クイックスタート
@@ -101,11 +101,9 @@ slack-zoom-bot/
 |--------|------|
 | `SLACK_SIGNING_SECRET` | Slack App の Signing Secret |
 | `SLACK_BOT_TOKEN` | Slack Bot の OAuth Token（xoxb-...） |
-| `ZOOM_ACCOUNT_A_ACCOUNT_ID` | Zoom Account A の Account ID |
-| `ZOOM_ACCOUNT_A_CLIENT_ID` | Zoom Account A の Client ID |
-| `ZOOM_ACCOUNT_A_CLIENT_SECRET` | Zoom Account A の Client Secret |
-| `ZOOM_ACCOUNT_B_*` | Zoom Account B 用（同上） |
-| `ZOOM_ACCOUNT_C_*` | Zoom Account C 用（同上） |
+| `ZOOM_ACCOUNT_ID` | Zoom の Account ID |
+| `ZOOM_CLIENT_ID` | Zoom の Client ID |
+| `ZOOM_CLIENT_SECRET` | Zoom の Client Secret |
 
 ## NPM スクリプト
 
@@ -144,7 +142,7 @@ slack-zoom-bot/
 4. ワークスペースにインストール
 5. Signing Secret と Bot User OAuth Token をメモ
 
-### 2. Zoom App 作成（アカウントごとに実施）
+### 2. Zoom App 作成
 
 1. [Zoom Marketplace](https://marketplace.zoom.us/) にアクセス
 2. 「Develop」→「Build App」

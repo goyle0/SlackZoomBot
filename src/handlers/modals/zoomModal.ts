@@ -3,11 +3,10 @@ import axios from 'axios';
 import { ZoomClient } from '../../services/zoom/ZoomClient';
 import { ZoomAuthService } from '../../services/zoom/ZoomAuthService';
 import { MessageBuilder } from '../../services/slack/MessageBuilder';
-import { getZoomAccount, getAllZoomAccounts } from '../../config/zoomAccounts';
+import { getZoomAccount } from '../../config/zoomAccounts';
 import { ZoomModalFormData, ZoomModalState } from '../../types/slack';
-import { MeetingDuration, ZoomAccountId } from '../../types/common';
+import { MeetingDuration } from '../../types/common';
 import { logger } from '../../utils/logger';
-import { formatToISOString } from '../../utils/dateTime';
 import { ZoomMeeting } from '../../services/zoom/types';
 
 const authService = new ZoomAuthService();
@@ -46,19 +45,48 @@ export async function handleZoomModalSubmit(
  * フォームデータを抽出
  */
 function extractFormData(values: Record<string, Record<string, unknown>>): ZoomModalFormData {
-  const actionBlock = values.action_block as Record<string, { selected_option?: { value: string } }>;
-  const accountBlock = values.account_block as Record<string, { selected_option?: { value: string } }>;
-  const durationBlock = values.duration_block as Record<string, { selected_option?: { value: string } }> | undefined;
+  const actionBlock = values.action_block as Record<
+    string,
+    { selected_option?: { value: string } }
+  >;
+  const dateBlock = values.date_block as Record<string, { selected_date?: string }>;
+  const timeBlock = values.time_block as
+    | Record<string, { selected_time?: string }>
+    | undefined;
+  const durationBlock = values.duration_block as
+    | Record<string, { selected_option?: { value: string } }>
+    | undefined;
   const topicBlock = values.topic_block as Record<string, { value?: string }> | undefined;
 
   return {
     action: actionBlock.action_select.selected_option?.value as 'create' | 'list',
-    account: accountBlock.account_select.selected_option?.value as ZoomAccountId | 'all',
+    date: dateBlock.date_select.selected_date || getTodayDate(),
+    time: timeBlock?.time_select?.selected_time || undefined,
     duration: durationBlock?.duration_select?.selected_option?.value
       ? (parseInt(durationBlock.duration_select.selected_option.value) as MeetingDuration)
       : 60,
     topic: topicBlock?.topic_input?.value || undefined,
   };
+}
+
+/**
+ * 今日の日付をYYYY-MM-DD形式で取得
+ */
+function getTodayDate(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 日付と時間からISO 8601形式の文字列を生成
+ */
+function createStartTime(date: string, time?: string): string {
+  const timeStr = time || '09:00';
+  // 日本時間で指定されているため、ISO形式に変換
+  return `${date}T${timeStr}:00`;
 }
 
 /**
@@ -68,17 +96,14 @@ async function handleCreateMeeting(
   formData: ZoomModalFormData,
   state: ZoomModalState
 ): Promise<void> {
-  if (formData.account === 'all') {
-    throw new Error('会議作成時は個別のアカウントを選択してください');
-  }
-
-  const account = getZoomAccount(formData.account as ZoomAccountId);
-  const topic = formData.topic || `Slack Meeting (${new Date().toLocaleDateString('ja-JP')})`;
+  const account = getZoomAccount();
+  const topic = formData.topic || `Slack Meeting (${formData.date})`;
+  const startTime = createStartTime(formData.date, formData.time);
 
   const meeting = await zoomClient.createMeeting(account, {
     topic,
     type: 2,
-    start_time: formatToISOString(new Date()),
+    start_time: startTime,
     duration: formData.duration || 60,
     timezone: 'Asia/Tokyo',
   });
@@ -94,20 +119,25 @@ async function handleListMeetings(
   formData: ZoomModalFormData,
   state: ZoomModalState
 ): Promise<void> {
-  const accounts =
-    formData.account === 'all'
-      ? getAllZoomAccounts()
-      : [getZoomAccount(formData.account as ZoomAccountId)];
+  const account = getZoomAccount();
 
-  const allMeetings: { accountName: string; meetings: ZoomMeeting[] }[] = [];
+  // 指定された日付の予定を取得
+  const response = await zoomClient.listMeetings(account, 'scheduled', 30);
 
-  for (const account of accounts) {
-    const response = await zoomClient.listMeetings(account, 'upcoming', 10);
-    allMeetings.push({
+  // 指定日の予定のみフィルタリング
+  const targetDate = formData.date;
+  const filteredMeetings = response.meetings.filter((meeting) => {
+    const meetingDate = meeting.start_time.split('T')[0];
+    return meetingDate === targetDate;
+  });
+
+  const allMeetings: { accountName: string; meetings: ZoomMeeting[]; date: string }[] = [
+    {
       accountName: account.name,
-      meetings: response.meetings,
-    });
-  }
+      meetings: filteredMeetings,
+      date: targetDate,
+    },
+  ];
 
   const message = MessageBuilder.buildMeetingListMessage(allMeetings);
   await sendSlackMessage(state.responseUrl, message);

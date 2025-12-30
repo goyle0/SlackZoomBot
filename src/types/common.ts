@@ -3,6 +3,3 @@ export type MeetingDuration = 30 | 60 | 90;
 
 /** アクション種別 */
 export type ActionType = 'create' | 'list';
-
-/** Zoomアカウント識別子 */
-export type ZoomAccountId = 'a' | 'b' | 'c';

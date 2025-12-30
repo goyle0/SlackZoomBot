@@ -1,9 +1,10 @@
-import { ActionType, MeetingDuration, ZoomAccountId } from './common';
+import { ActionType, MeetingDuration } from './common';
 
 /** モーダル送信時のフォームデータ */
 export interface ZoomModalFormData {
   action: ActionType;
-  account: ZoomAccountId | 'all';
+  date: string; // YYYY-MM-DD形式
+  time?: string; // HH:MM形式（会議作成時）
   duration?: MeetingDuration;
   topic?: string;
 }
