@@ -7,6 +7,7 @@ export interface ZoomModalFormData {
   time?: string; // HH:MM形式（会議作成時）
   duration?: MeetingDuration;
   topic?: string;
+  password?: string; // 会議パスワード（会議作成時）
 }
 
 /** モーダルのビュー状態 */

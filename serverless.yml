@@ -1,6 +1,7 @@
 service: slack-zoom-bot
 
 frameworkVersion: "3"
+useDotenv: true
 
 provider:
   name: aws
@@ -19,9 +20,19 @@ provider:
 functions:
   slack:
     handler: src/index.handler
-    url: true
+    url:
+      cors:
+        allowedOrigins:
+          - '*'
+        allowedHeaders:
+          - Content-Type
+          - X-Slack-Signature
+          - X-Slack-Request-Timestamp
+        allowedMethods:
+          - POST
 
 plugins:
+  - serverless-dotenv-plugin
   - serverless-esbuild
   - serverless-offline
 

@@ -2,31 +2,44 @@ import { View } from '@slack/bolt';
 import { CALLBACK_IDS } from '../../handlers/modals/callbacks';
 
 /**
- * 今日の日付をYYYY-MM-DD形式で取得
+ * 今日の日付をYYYY-MM-DD形式で取得（JSTタイムゾーン）
  */
 function getTodayDate(): string {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const now = new Date();
+  // JSTでの日付を取得
+  return now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
 }
 
 /**
- * 現在時刻から30分後の時刻をHH:MM形式で取得（30分単位に丸める）
+ * 現在時刻から30分後の時刻をHH:MM形式で取得（30分単位に丸める、JSTタイムゾーン）
  */
 function getDefaultTime(): string {
   const now = new Date();
+  // 30分後に設定
   now.setMinutes(now.getMinutes() + 30);
+
+  // JSTでの時刻を取得
+  const jstTimeStr = now.toLocaleTimeString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const [hoursStr, minutesStr] = jstTimeStr.split(':');
+  let hours = parseInt(hoursStr, 10);
+  const minutes = parseInt(minutesStr, 10);
+
   // 30分単位に丸める
-  const minutes = Math.ceil(now.getMinutes() / 30) * 30;
-  now.setMinutes(minutes % 60);
-  if (minutes >= 60) {
-    now.setHours(now.getHours() + 1);
+  const roundedMinutes = Math.ceil(minutes / 30) * 30;
+  let finalMinutes = roundedMinutes;
+
+  if (roundedMinutes >= 60) {
+    finalMinutes = 0;
+    hours = (hours + 1) % 24;
   }
-  const hours = String(now.getHours()).padStart(2, '0');
-  const mins = String(now.getMinutes()).padStart(2, '0');
-  return `${hours}:${mins}`;
+
+  return `${String(hours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}`;
 }
 
 /**
@@ -115,6 +128,29 @@ export class ModalBuilder {
           label: {
             type: 'plain_text',
             text: '会議名（会議作成時）',
+          },
+        },
+        // パスワード入力（会議作成時）
+        {
+          type: 'input',
+          block_id: 'password_block',
+          optional: true,
+          element: {
+            type: 'plain_text_input',
+            action_id: 'password_input',
+            max_length: 10,
+            placeholder: {
+              type: 'plain_text',
+              text: '省略時は自動生成',
+            },
+          },
+          label: {
+            type: 'plain_text',
+            text: 'パスワード（会議作成時）',
+          },
+          hint: {
+            type: 'plain_text',
+            text: '英数字と@-_*のみ、最大10文字',
           },
         },
         // 時間選択（会議作成時）
