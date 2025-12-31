@@ -82,7 +82,7 @@ export class MessageBuilder {
    * 会議一覧メッセージを構築（1週間表示対応）
    */
   static buildMeetingListMessage(
-    accountMeetings: { accountName: string; meetings: ZoomMeeting[]; date?: string }[]
+    accountMeetings: { accountId: string; accountName: string; meetings: ZoomMeeting[]; date?: string }[]
   ): object {
     const blocks: object[] = [];
 
@@ -118,7 +118,7 @@ export class MessageBuilder {
       }
     }
 
-    for (const { meetings, date } of accountMeetings) {
+    for (const { accountId, meetings, date } of accountMeetings) {
       // 日付をJSTでフォーマット
       let dateHeader = '本日';
       if (date) {
@@ -188,6 +188,12 @@ export class MessageBuilder {
             topic: meeting.topic,
             start_time: meeting.start_time,
             duration: meeting.duration,
+            accountId: accountId,
+          });
+
+          const deleteData = JSON.stringify({
+            meetingId: String(meeting.id),
+            accountId: accountId,
           });
 
           blocks.push({
@@ -212,7 +218,7 @@ export class MessageBuilder {
                 },
                 style: 'danger',
                 action_id: 'delete_meeting',
-                value: String(meeting.id),
+                value: deleteData,
                 confirm: {
                   title: {
                     type: 'plain_text',

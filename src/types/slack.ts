@@ -8,6 +8,7 @@ export interface ZoomModalFormData {
   duration?: MeetingDuration;
   topic?: string;
   password?: string; // 会議パスワード（会議作成時）
+  accountId?: string; // 選択されたZoomアカウントID（複数アカウント時）
 }
 
 /** モーダルのビュー状態 */

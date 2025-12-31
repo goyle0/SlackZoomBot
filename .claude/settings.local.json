@@ -21,7 +21,9 @@
       "Bash(aws lambda add-permission:*)",
       "Bash(aws lambda delete-function-url-config:*)",
       "Bash(aws lambda create-function-url-config:*)",
-      "Bash(npx serverless:*)"
+      "Bash(npx serverless:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)"
     ]
   }
 }

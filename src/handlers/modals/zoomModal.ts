@@ -10,7 +10,7 @@ import axios from 'axios';
 import { ZoomClient } from '../../services/zoom/ZoomClient';
 import { ZoomAuthService } from '../../services/zoom/ZoomAuthService';
 import { MessageBuilder } from '../../services/slack/MessageBuilder';
-import { getZoomAccount } from '../../config/zoomAccounts';
+import { getZoomAccount, getZoomAccountById } from '../../config/zoomAccounts';
 import { ZoomModalFormData, ZoomModalState } from '../../types/slack';
 import { MeetingDuration } from '../../types/common';
 import { logger } from '../../utils/logger';
@@ -67,6 +67,11 @@ function extractFormData(values: Record<string, Record<string, unknown>>): ZoomM
   const topicBlock = values.topic_block as Record<string, { value?: string }> | undefined;
   const passwordBlock = values.password_block as Record<string, { value?: string }> | undefined;
 
+  // アカウント選択の取得（存在する場合）
+  const accountBlock = values.account_block as
+    | Record<string, { selected_option?: { value: string } }>
+    | undefined;
+
   return {
     action: actionBlock.action_select.selected_option?.value as 'create' | 'list',
     date: dateBlock.date_select.selected_date || getTodayDate(),
@@ -76,6 +81,7 @@ function extractFormData(values: Record<string, Record<string, unknown>>): ZoomM
       : 60,
     topic: topicBlock?.topic_input?.value || undefined,
     password: passwordBlock?.password_input?.value || undefined,
+    accountId: accountBlock?.account_select?.selected_option?.value || undefined,
   };
 }
 
@@ -118,7 +124,11 @@ async function handleCreateMeeting(
   formData: ZoomModalFormData,
   state: ZoomModalState
 ): Promise<void> {
-  const account = getZoomAccount();
+  // アカウント取得（accountIdが指定されていればそれを使用、なければデフォルト）
+  const account = formData.accountId
+    ? getZoomAccountById(formData.accountId)
+    : getZoomAccount();
+
   const topic = formData.topic || `Slack Meeting (${formData.date})`;
   const startTime = createStartTime(formData.date, formData.time);
 
@@ -161,7 +171,10 @@ async function handleListMeetings(
   formData: ZoomModalFormData,
   state: ZoomModalState
 ): Promise<void> {
-  const account = getZoomAccount();
+  // アカウント取得（accountIdが指定されていればそれを使用、なければデフォルト）
+  const account = formData.accountId
+    ? getZoomAccountById(formData.accountId)
+    : getZoomAccount();
 
   // 指定された日付から1週間分の予定を取得
   // 'scheduled' を使用して、過去の会議も含めて取得（'upcoming' は現在時刻以降のみ）
@@ -240,10 +253,11 @@ async function handleListMeetings(
     }
   }
 
-  // MessageBuilder用のデータ形式に変換
-  const allMeetings: { accountName: string; meetings: ZoomMeeting[]; date: string }[] = [];
+  // MessageBuilder用のデータ形式に変換（accountIdを含める）
+  const allMeetings: { accountId: string; accountName: string; meetings: ZoomMeeting[]; date: string }[] = [];
   for (const date of weekDates) {
     allMeetings.push({
+      accountId: account.id,
       accountName: account.name,
       meetings: meetingsByDate.get(date) || [],
       date,
@@ -289,12 +303,25 @@ export async function handleDeleteMeeting(
     return;
   }
 
-  const meetingId = action.value;
-
-  logger.info('Delete meeting requested', { meetingId });
+  // JSONパースしてmeetingIdとaccountIdを取得
+  let meetingId: string;
+  let accountId: string | undefined;
 
   try {
-    const account = getZoomAccount();
+    const data = JSON.parse(action.value) as { meetingId: string; accountId?: string };
+    meetingId = data.meetingId;
+    accountId = data.accountId;
+  } catch {
+    // 後方互換性: 旧形式（会議IDのみ）の場合
+    meetingId = action.value;
+    accountId = undefined;
+  }
+
+  logger.info('Delete meeting requested', { meetingId, accountId });
+
+  try {
+    // アカウント取得（accountIdが指定されていればそれを使用、なければデフォルト）
+    const account = accountId ? getZoomAccountById(accountId) : getZoomAccount();
     await zoomClient.deleteMeeting(account, meetingId);
 
     const message = MessageBuilder.buildMeetingDeletedMessage(meetingId);
@@ -327,6 +354,7 @@ export async function handleDeleteMeeting(
 interface EditModalState {
   meetingId: string;
   responseUrl: string;
+  accountId?: string;
 }
 
 /**
@@ -345,8 +373,14 @@ export async function handleEditMeeting(
   }
 
   try {
-    const meetingData = JSON.parse(action.value);
-    const { id, topic, start_time, duration } = meetingData;
+    const meetingData = JSON.parse(action.value) as {
+      id: string;
+      topic: string;
+      start_time: string;
+      duration: number;
+      accountId?: string;
+    };
+    const { id, topic, start_time, duration, accountId } = meetingData;
 
     // 日付と時刻を分解（JSTタイムゾーンで）
     const dateTime = new Date(start_time);
@@ -360,12 +394,13 @@ export async function handleEditMeeting(
       hour12: false,
     });
 
-    logger.info('Edit meeting requested', { meetingId: id, topic });
+    logger.info('Edit meeting requested', { meetingId: id, topic, accountId });
 
-    // 編集モーダルを開く
+    // 編集モーダルを開く（accountIdを状態に含める）
     const state: EditModalState = {
       meetingId: id,
       responseUrl: (body as { response_url?: string }).response_url || '',
+      accountId: accountId,
     };
 
     await client.views.open({
@@ -530,10 +565,12 @@ export async function handleEditModalSubmit(
     startTime,
     duration,
     hasPassword: !!password,
+    accountId: state.accountId,
   });
 
   try {
-    const account = getZoomAccount();
+    // アカウント取得（accountIdが指定されていればそれを使用、なければデフォルト）
+    const account = state.accountId ? getZoomAccountById(state.accountId) : getZoomAccount();
     const updateRequest: {
       topic: string;
       start_time: string;
