@@ -14,20 +14,26 @@ import {
   handleEditModalSubmit,
 } from './handlers/modals/zoomModal';
 import { CALLBACK_IDS } from './handlers/modals/callbacks';
+import { getSlackConfig } from './config/env';
 import { logger } from './utils/logger';
+
+// ========================================
+// 環境変数の検証（起動時に必須項目をチェック）
+// ========================================
+const slackConfig = getSlackConfig();
 
 // ========================================
 // AWS Lambda Receiver 初期化
 // ========================================
 const awsLambdaReceiver = new AwsLambdaReceiver({
-  signingSecret: process.env.SLACK_SIGNING_SECRET!,
+  signingSecret: slackConfig.signingSecret,
 });
 
 // ========================================
 // Slack Bolt App 初期化
 // ========================================
 const app = new App({
-  token: process.env.SLACK_BOT_TOKEN!,
+  token: slackConfig.botToken,
   receiver: awsLambdaReceiver,
 });
 

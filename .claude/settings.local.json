@@ -23,7 +23,12 @@
       "Bash(aws lambda create-function-url-config:*)",
       "Bash(npx serverless:*)",
       "Bash(ls:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(gh pr:*)",
+      "Bash(git --no-pager diff main..develop/goyle0 --no-ext-diff)",
+      "WebSearch",
+      "WebFetch(domain:developers.zoom.us)",
+      "Bash(git --no-pager diff:*)"
     ]
   }
 }

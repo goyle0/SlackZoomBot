@@ -13,7 +13,7 @@ import { MessageBuilder } from '../../services/slack/MessageBuilder';
 import { getZoomAccount, getZoomAccountById } from '../../config/zoomAccounts';
 import { ZoomModalFormData, ZoomModalState } from '../../types/slack';
 import { MeetingDuration } from '../../types/common';
-import { logger } from '../../utils/logger';
+import { logger, promiseAllWithConcurrency } from '../../utils';
 import { ZoomMeeting } from '../../services/zoom/types';
 import { CALLBACK_IDS } from './callbacks';
 
@@ -239,16 +239,55 @@ async function handleListMeetings(
   }
 
   // 各会議のパスワードを取得（listMeetingsではパスワードが返されないため）
+  // 並列度5でパスワード取得（Zoom APIレート制限考慮）
+  const PASSWORD_FETCH_CONCURRENCY = 5;
+
+  // 全会議をフラット化
+  const allMeetingsFlat: ZoomMeeting[] = [];
   for (const [, dateMeetings] of meetingsByDate) {
-    for (let i = 0; i < dateMeetings.length; i++) {
-      try {
-        const meetingDetails = await zoomClient.getMeeting(account, dateMeetings[i].id);
-        dateMeetings[i].password = meetingDetails.password;
-      } catch (error) {
-        logger.warn('Failed to get meeting password', {
-          meetingId: dateMeetings[i].id,
-          error: String(error),
-        });
+    allMeetingsFlat.push(...dateMeetings);
+  }
+
+  // 並列でパスワード取得
+  const results = await promiseAllWithConcurrency(
+    allMeetingsFlat,
+    async (meeting) => {
+      const details = await zoomClient.getMeeting(account, meeting.id);
+      return { meetingId: meeting.id, password: details.password };
+    },
+    PASSWORD_FETCH_CONCURRENCY
+  );
+
+  // パスワードをマップに格納
+  const passwordMap = new Map<number, string | undefined>();
+  results.forEach((result) => {
+    if (result.status === 'fulfilled') {
+      passwordMap.set(result.value.meetingId, result.value.password);
+    }
+  });
+
+  // 失敗した会議をログ出力（結果順序に依存しない方法で）
+  const successMeetingIds = new Set(
+    results
+      .filter((r): r is PromiseFulfilledResult<{ meetingId: number; password: string | undefined }> =>
+        r.status === 'fulfilled'
+      )
+      .map((r) => r.value.meetingId)
+  );
+  for (const meeting of allMeetingsFlat) {
+    if (!successMeetingIds.has(meeting.id)) {
+      logger.warn('Failed to get meeting password', {
+        meetingId: meeting.id,
+      });
+    }
+  }
+
+  // 各会議にパスワードを設定
+  for (const [, dateMeetings] of meetingsByDate) {
+    for (const meeting of dateMeetings) {
+      const password = passwordMap.get(meeting.id);
+      if (password !== undefined) {
+        meeting.password = password;
       }
     }
   }

@@ -46,7 +46,19 @@ function getOptionalEnv(key: string, defaultValue: string): string {
 }
 
 /**
+ * Slack設定のみを検証・取得
+ * （Zoom設定はzoomAccounts.tsで別途検証される）
+ */
+export function getSlackConfig(): SlackConfig {
+  return {
+    signingSecret: getRequiredEnv('SLACK_SIGNING_SECRET'),
+    botToken: getRequiredEnv('SLACK_BOT_TOKEN'),
+  };
+}
+
+/**
  * アプリケーション設定を取得
+ * @deprecated Zoom設定は新形式（ZOOM_ACCOUNTS）を使用するため、Slack設定のみ必要な場合はgetSlackConfig()を使用してください
  */
 export function getConfig(): AppConfig {
   return {
