@@ -22,6 +22,7 @@ export interface CreateMeetingRequest {
   start_time: string;
   duration: number;
   timezone: string;
+  password?: string;
 }
 
 /** Zoom会議作成レスポンス */
@@ -33,6 +34,7 @@ export interface CreateMeetingResponse {
   timezone: string;
   join_url: string;
   password?: string;
+  encrypted_password?: string;
 }
 
 /** Zoom会議一覧レスポンス */
@@ -52,4 +54,15 @@ export interface ZoomMeeting {
   duration: number;
   timezone: string;
   join_url: string;
+  password?: string;
+  encrypted_password?: string;
+}
+
+/** Zoom会議更新リクエスト */
+export interface UpdateMeetingRequest {
+  topic?: string;
+  start_time?: string;
+  duration?: number;
+  timezone?: string;
+  password?: string;
 }

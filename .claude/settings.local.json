@@ -6,7 +6,29 @@
       "Bash(npm install:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npm run lint)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(cat:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(aws logs tail:*)",
+      "Bash(curl:*)",
+      "Bash(aws lambda get-function-url-config:*)",
+      "Bash(npx serverless deploy --force)",
+      "Bash(aws logs:*)",
+      "Bash(MSYS_NO_PATHCONV=1 aws logs tail:*)",
+      "Bash(aws lambda get-policy:*)",
+      "Bash(aws lambda invoke:*)",
+      "Bash(aws lambda remove-permission:*)",
+      "Bash(aws lambda add-permission:*)",
+      "Bash(aws lambda delete-function-url-config:*)",
+      "Bash(aws lambda create-function-url-config:*)",
+      "Bash(npx serverless:*)",
+      "Bash(ls:*)",
+      "Bash(pkill:*)",
+      "Bash(gh pr:*)",
+      "Bash(git --no-pager diff main..develop/goyle0 --no-ext-diff)",
+      "WebSearch",
+      "WebFetch(domain:developers.zoom.us)",
+      "Bash(git --no-pager diff:*)"
     ]
   }
 }
